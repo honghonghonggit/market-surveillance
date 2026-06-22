@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# 생성 데이터 / 산출물 (재현 가능하므로 커밋하지 않음)
+data/
+*.parquet
+*.csv
+artifacts/
+*.png
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
