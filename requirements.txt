@@ -1,6 +1,6 @@
-numpy
-pandas
-scikit-learn
-matplotlib
-streamlit
-pytest
+numpy==2.5.0
+pandas==3.0.3
+scikit-learn==1.9.0
+matplotlib==3.11.0
+streamlit==1.58.0
+pytest==9.1.1
