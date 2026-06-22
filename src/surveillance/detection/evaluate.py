@@ -51,9 +51,11 @@ def build_truth(
 
     records = []
     for (account_id, w), lbls in truth.items():
-        # 한 윈도우에 두 패턴이 겹치면 워시를 우선(자기체결이 더 확정적)
+        # 한 윈도우에 여러 패턴이 겹치면 우선순위로 정함(자기체결이 가장 확정적)
         if Label.WASH_TRADING in lbls:
             true_label = Label.WASH_TRADING.value
+        elif Label.LAYERING in lbls:
+            true_label = Label.LAYERING.value
         elif Label.SPOOFING in lbls:
             true_label = Label.SPOOFING.value
         else:
@@ -127,7 +129,7 @@ def evaluate(predictions: pd.DataFrame, truth: pd.DataFrame) -> EvalReport:
     accuracy = (tp + tn) / len(df) if len(df) else 0.0
 
     per_class: Dict[str, Dict[str, float]] = {}
-    for cls in (Label.SPOOFING.value, Label.WASH_TRADING.value):
+    for cls in (Label.SPOOFING.value, Label.WASH_TRADING.value, Label.LAYERING.value):
         is_true = df["true_label"] == cls
         is_pred = df["predicted_label"] == cls
         c_tp = int((is_true & is_pred).sum())

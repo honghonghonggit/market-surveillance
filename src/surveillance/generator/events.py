@@ -43,6 +43,7 @@ class Label(str, Enum):
     NORMAL = "NORMAL"
     SPOOFING = "SPOOFING"
     WASH_TRADING = "WASH_TRADING"
+    LAYERING = "LAYERING"
 
 
 @dataclass(frozen=True, slots=True)

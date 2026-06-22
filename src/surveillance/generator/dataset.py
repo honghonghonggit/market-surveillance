@@ -20,6 +20,7 @@ from .events import GroundTruthLabel, OrderEvent
 from .injectors import (
     Episode,
     InjectionConfig,
+    layering_episode,
     spoofing_episode,
     wash_trading_episode,
 )
@@ -37,6 +38,7 @@ class DatasetConfig:
     tail_margin: int = 200        # 끝부분 여유(에피소드가 잘리지 않도록)
     num_spoofing_episodes: int = 8
     num_wash_episodes: int = 8
+    num_layering_episodes: int = 8
     normal: NormalFlowConfig = field(default_factory=NormalFlowConfig)
     injection: InjectionConfig = field(default_factory=InjectionConfig)
 
@@ -67,6 +69,8 @@ def generate_dataset(config: DatasetConfig | None = None) -> DatasetResult:
         schedule(spoofing_episode, f"M_SPOOF_{i:02d}", f"spoof_{i:02d}")
     for i in range(cfg.num_wash_episodes):
         schedule(wash_trading_episode, f"M_WASH_{i:02d}", f"wash_{i:02d}")
+    for i in range(cfg.num_layering_episodes):
+        schedule(layering_episode, f"M_LAYER_{i:02d}", f"layer_{i:02d}")
 
     active: List[Episode] = []
     for ts in range(cfg.duration):

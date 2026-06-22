@@ -28,19 +28,25 @@ Episode = Generator[None, int, None]
 @dataclass
 class InjectionConfig:
     # 스푸핑: 대량 주문을 여러 개 깔았다가 체결 직전 전량 취소
-    spoof_num_orders: int = 5
+    # 스푸핑: *소수 레벨*에 초대량 주문을 깔았다가 체결 직전 취소(큰 qty가 변별 신호)
+    spoof_num_orders: int = 4
     spoof_qty: int = 80          # 정상 max_qty(~10) 대비 비정상적으로 큼
     spoof_hold_ticks: int = 4    # 깔고 나서 취소까지 유지하는 틱 수
     # 워시트레이딩: 동일 계좌 자기체결을 짧은 윈도우에 반복
     wash_num_trades: int = 6
     wash_qty: int = 15
+    # 레이어링: *다수 레벨*에 중간 크기 주문을 층층이 분산(distinct level 수가 변별 신호)
+    layering_num_levels: int = 7
+    layering_qty: int = 18
+    layering_hold_ticks: int = 4
 
 
 def spoofing_episode(
     ctx: StreamContext, account: str, episode_id: str, cfg: InjectionConfig
 ) -> Episode:
-    """대량 매수 주문을 best bid 근처에 층층이 깔아 매수 압력을 가장한 뒤,
-    체결되기 전에 전량 취소한다. → 해당 계좌 윈도우의 취소율과 주문량이 급등."""
+    """초대량 매수 주문을 best bid의 *한두 레벨*에 집중해 매수 압력을 가장한 뒤,
+    체결되기 전에 전량 취소한다. 큰 주문량(qty z-score)이 변별 신호다.
+    → 해당 계좌 윈도우의 취소율과 주문량이 급등(소수 레벨에 집중)."""
     ts = yield  # priming 후 첫 send로 시작 ts 수신
 
     mid = ctx.engine.mid_price()
@@ -50,7 +56,7 @@ def spoofing_episode(
 
     oids = []
     for k in range(cfg.spoof_num_orders):
-        price = max(anchor - k, 1)  # best bid 바로 아래로 층층이(체결되지 않게 rest)
+        price = max(anchor - (k % 2), 1)  # best bid·그 아래 한 틱(2레벨에 집중)
         oid = ctx.submit(
             account, Side.BUY, price, cfg.spoof_qty, ts,
             label=Label.SPOOFING, episode_id=episode_id,
@@ -61,6 +67,35 @@ def spoofing_episode(
         ts = yield
 
     for oid in oids:  # 체결 직전 전량 취소(스푸핑의 핵심)
+        ctx.cancel(oid, ts)
+
+
+def layering_episode(
+    ctx: StreamContext, account: str, episode_id: str, cfg: InjectionConfig
+) -> Episode:
+    """여러 가격 레벨에 중간 크기 주문을 *층층이 분산* 배치해 호가창 깊이를 왜곡한 뒤
+    전량 취소한다. 스푸핑과 달리 주문량은 그리 크지 않지만 *서로 다른 가격 레벨 수*가
+    비정상적으로 많은 것이 변별 신호다. → distinct_price_levels + 취소율 급등."""
+    ts = yield
+
+    mid = ctx.engine.mid_price()
+    anchor = ctx.engine.best_bid()
+    if anchor is None:
+        anchor = int(round(mid)) - 1 if mid is not None else 9_999
+
+    oids = []
+    for k in range(cfg.layering_num_levels):
+        price = max(anchor - k, 1)  # 연속된 여러 레벨에 한 건씩 분산
+        oid = ctx.submit(
+            account, Side.BUY, price, cfg.layering_qty, ts,
+            label=Label.LAYERING, episode_id=episode_id,
+        )
+        oids.append(oid)
+
+    for _ in range(cfg.layering_hold_ticks):
+        ts = yield
+
+    for oid in oids:  # 목적 달성 후 전량 취소
         ctx.cancel(oid, ts)
 
 

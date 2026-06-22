@@ -24,13 +24,14 @@ from .windows import DEFAULT_WINDOW_MS, window_index
 Key = Tuple[str, int]  # (account_id, window)
 
 
-def _blank() -> Dict[str, float]:
+def _blank() -> Dict[str, object]:
     return {
         "num_new": 0,
         "num_cancel": 0,
         "num_trade": 0,
         "self_trade_count": 0,
         "max_new_qty": 0,
+        "new_prices": set(),  # 윈도우 내 신규 주문이 깔린 서로 다른 가격 레벨
     }
 
 
@@ -47,6 +48,7 @@ def build_features(
             row = acc[(e.account_id, w)]
             row["num_new"] += 1
             row["max_new_qty"] = max(row["max_new_qty"], e.quantity)
+            row["new_prices"].add(e.price)
             window_new_qtys[w].append(e.quantity)
         elif e.event_type is EventType.CANCEL:
             acc[(e.account_id, w)]["num_cancel"] += 1
@@ -81,6 +83,7 @@ def build_features(
                 "num_trade": num_trade,
                 "self_trade_count": row["self_trade_count"],
                 "max_new_qty": row["max_new_qty"],
+                "distinct_price_levels": len(row["new_prices"]),
                 "cancel_ratio": row["num_cancel"] / num_new if num_new > 0 else 0.0,
                 "order_to_trade_ratio": num_new / num_trade if num_trade > 0 else float(num_new),
                 "qty_zscore": qty_zscore,
@@ -89,8 +92,8 @@ def build_features(
 
     cols = [
         "account_id", "window", "num_new", "num_cancel", "num_trade",
-        "self_trade_count", "max_new_qty", "cancel_ratio",
-        "order_to_trade_ratio", "qty_zscore",
+        "self_trade_count", "max_new_qty", "distinct_price_levels",
+        "cancel_ratio", "order_to_trade_ratio", "qty_zscore",
     ]
     return pd.DataFrame.from_records(records, columns=cols).sort_values(
         ["window", "account_id"]

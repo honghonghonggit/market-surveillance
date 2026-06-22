@@ -65,10 +65,22 @@ def test_dataset_is_reproducible():
     ]
 
 
-def test_both_patterns_are_injected(dataset):
+def test_all_three_patterns_are_injected(dataset):
     injected = {l.label for l in dataset.labels}
     assert Label.SPOOFING in injected
     assert Label.WASH_TRADING in injected
+    assert Label.LAYERING in injected
+
+
+def test_layering_spans_many_price_levels(dataset):
+    """레이어링은 서로 다른 가격 레벨이 많아야 한다(스푸핑과의 변별 신호)."""
+    layer_ids = {l.order_id for l in dataset.labels if l.label is Label.LAYERING}
+    layer_new = [
+        e for e in dataset.events
+        if e.order_id in layer_ids and e.event_type is EventType.NEW
+    ]
+    # 레이어링 NEW 주문의 서로 다른 가격 수가 충분히 많아야 함
+    assert len({e.price for e in layer_new}) >= 5
 
 
 def test_manipulation_is_rare(dataset):
