@@ -9,7 +9,7 @@
 > 아니라, 시세조종 탐지의 **핵심 원리와 ML 평가 방법론을 직접 구현**해 본 교육·포트폴리오 목적의
 > 프로젝트입니다.
 
-🔗 **라이브 데모:** https://market-surveillance-gz8nmqme9fnfhw65qzxurs.streamlit.app/ · 코드: https://github.com/honghonghonggit/market-surveillance
+🔗 **라이브 데모:** https://market-surveillance-gz8nmqme9fnfhw65qzxurs.streamlit.app/
 
 ---
 
@@ -31,11 +31,7 @@
 
 ## 2. 아키텍처 / 파이프라인
 
-```
-합성 주문 생성기 ──► 패턴 주입 ──► (인메모리 스트림) ──► 피처 엔지니어링 ──► 탐지(룰) ──► 평가
-   랜덤워크 +        스푸핑/워시        OrderEvent          (계좌×윈도우)      임계값     정밀도/재현율
-   경량 매칭엔진    +ground truth 라벨   NEW/CANCEL/TRADE                              혼동행렬
-```
+![아키텍처 파이프라인](docs/architecture.png)
 
 핵심 모듈 (`src/surveillance/`):
 - `generator/` — 데이터 모델(`events.py`), 경량 매칭엔진(`orderbook.py`), 정상 흐름(`normal_flow.py`),
